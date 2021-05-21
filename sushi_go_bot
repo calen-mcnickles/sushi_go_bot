@@ -1,0 +1,515 @@
+from PIL import ImageGrab, ImageOps
+import os
+import win32api, win32con
+import time
+import pyautogui
+from numpy import *
+
+"""
+All coordinates assume main desktop screen 125% in chrome. 
+Scrolled so that top "adobe ended support" box is on top. 
+"""
+x_pad = 249
+y_pad = 149
+
+# Number of ingredients  you start the game with
+food_on_hand = {'shrimp': 5,
+                'rice': 10,
+                'nori': 10,
+                'roe': 10,
+                'salmon': 5,
+                'unagi': 5
+                }
+#  Sushi rgb summations. So that you can identify the customers order.
+sushi_types = {
+    3799 : 'gunkan',
+    3625 : 'gunkan',
+    3559 : 'gunkan',
+    3656 : 'gunkan',
+    3482 : 'gunkan',
+    3784 : 'gunkan',
+    3544 : 'gunkan',
+    3370 : 'gunkan',
+
+    3665 : 'onigiri',
+    3617 : 'onigiri',
+    3665 : 'onigiri',
+    3571 : 'onigiri',
+    3714 : 'onigiri',
+    3620 : 'onigiri',
+    4133 : 'onigiri',
+    3650 : 'onigiri',
+    4085 : 'onigiri',
+    3602 : 'onigiri',
+
+    3956: 'caliroll',
+    4438 : 'caliroll',
+    3716 : 'caliroll',
+    4198 : 'caliroll',
+    4438 : 'caliroll',
+    3813 : 'caliroll',
+    4295 : 'caliroll',
+    3941 : 'caliroll',
+    4423 : 'caliroll',
+    4183 : 'caliroll',
+}
+
+#  rgb summation for empty seats
+class Blank:
+    seat_1 = 7178
+    seat_2 = 5837
+    seat_3 = 10402
+    seat_4 = 10160
+    seat_5 = 6395
+    seat_6 = 9336
+
+#  grabs screen
+def screen_grab():
+    box = (x_pad+1, y_pad+1, x_pad+800, y_pad+600)  # main desktop screen, 125%
+    im = ImageGrab.grab()
+    # im.save(os.getcwd() + '\\full_snap__' + str(int(time.time())) +
+    #         '.png', 'PNG')
+    return im
+
+#  grabs play area
+def grab():
+    box = (x_pad+1, y_pad+1, x_pad+800, y_pad+600)  # main desktop screen, 125%
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    return a
+
+def left_click():
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,0,0)
+    time.sleep(.1)
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,0,0)
+    # print('Click')          #completely optional. But nice for debugging purposes.
+
+# unused
+def left_down():
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN,0,0)
+    time.sleep(.1)
+    print('left Down')
+
+# unused
+def left_up():
+    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP,0,0)
+    time.sleep(.1)
+    print('left release')
+
+# moves mouse to set coordinates used for clicks
+def mouse_pos(cord=(0,0)):
+    win32api.SetCursorPos(cord)
+
+#  imported pyautogui as I was having issues with win32api.SetCursorPos()
+def get_cords():
+    print(pyautogui.position())
+
+#  get through start menu
+def start_game():
+    #  location of first menu (play sign)
+    mouse_pos((624, 404))
+    left_click()
+    time.sleep(.1)
+    #  location of second (continue sign)
+    mouse_pos((700, 627))
+    left_click()
+    time.sleep(.1)
+    #  location of third (skip sign)
+    mouse_pos((1007, 711))
+    left_click()
+    time.sleep(.1)
+    #  location of fourth (final continue)
+    mouse_pos((719, 616))
+    left_click()
+    time.sleep(.1)
+
+# coordinates for all of the food and buying
+class Cord:
+    #  f is for food location
+    f_shrimp = (293, 565)
+    f_rice = (358, 569)
+    f_nori = (295, 637)
+    f_roe = (359, 639)
+    f_salmon = (298, 705)
+    f_unagi = (363, 707)
+
+    phone = (961, 585)
+
+    #  t for toppings
+    menu_toppings = (903, 489)
+    t_shrimp = (871, 428)
+    t_unagi = (972, 428)
+    t_nori = (867, 491)
+    t_roe = (966, 491)
+    t_salmon = (862, 555)
+    t_end_call = (996, 568)
+
+    menu_rice = (925, 517)
+    buy_rice = (926, 495)
+    delivery_norm = (854, 508)
+
+#  clears used plates
+def clear_tables():
+    mouse_pos((354, 411))
+    left_click()
+
+    mouse_pos((493, 410))
+    left_click()
+
+    mouse_pos((619, 409))
+    left_click()
+
+    mouse_pos((739, 407))
+    left_click()
+
+    mouse_pos((865, 410))
+    left_click()
+
+    mouse_pos((994, 412))
+    left_click()
+    time.sleep(1)
+
+# folds mat to send food out
+def fold_mat():
+    mouse_pos((450, 569))
+    left_click()
+    time.sleep(.1)
+
+'''
+Recipes:
+ 
+    onigiri
+        2 rice, 1 nori
+     
+    caliroll:
+        1 rice, 1 nori, 1 roe
+         
+    gunkan:
+        1 rice, 1 nori, 2 roe
+'''
+
+# makes the rolls and reduces number of food on hand
+def make_food(food):
+    if food == 'caliroll':
+        print("Making a caliroll")
+        food_on_hand['rice'] -= 1
+        food_on_hand['nori'] -= 1
+        food_on_hand['roe'] -= 1
+        mouse_pos(Cord.f_rice)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_nori)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_roe)
+        left_click()
+        time.sleep(.1)
+        fold_mat()
+        time.sleep(1.5)
+    elif food == 'onigiri':
+        print("Making onigiri")
+        food_on_hand['rice'] -= 2
+        food_on_hand['nori'] -= 1
+        mouse_pos(Cord.f_rice)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_rice)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_nori)
+        left_click()
+        time.sleep(.05)
+        fold_mat()
+        left_click()
+        time.sleep(1.5)
+
+    elif food == 'gunkan':
+        print("Making gunkan")
+        food_on_hand['rice'] -= 1
+        food_on_hand['nori'] -= 1
+        food_on_hand['roe'] -= 2
+        mouse_pos(Cord.f_rice)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_nori)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_roe)
+        left_click()
+        time.sleep(.05)
+        mouse_pos(Cord.f_roe)
+        left_click()
+        time.sleep(.1)
+        fold_mat()
+        time.sleep(1.5)
+
+#  buys food when we start to run out
+def buy_food(food):
+    attempts = 0
+    if food == 'rice':
+        mouse_pos(Cord.phone)
+        time.sleep(.2)
+        left_click()
+        mouse_pos(Cord.menu_rice)
+        time.sleep(.2)
+        left_click()
+        time.sleep(.1)
+        s = screen_grab()
+        time.sleep(.1)
+        if s.getpixel(Cord.buy_rice) not in ((127, 127, 127),(218, 255, 236)): #  (218, 255, 236)
+            print(s.getpixel(Cord.buy_rice))  # not necessary but useful for debugging
+            print('rice is available')
+            mouse_pos(Cord.buy_rice)
+            time.sleep(.2)
+            left_click()
+            mouse_pos(Cord.delivery_norm)
+            time.sleep(.2)
+            left_click()
+            food_on_hand['rice'] += 10
+            time.sleep(3.5)
+        else:
+            print('rice is NOT available')
+            print(s.getpixel(Cord.buy_rice))  # not necessary but useful for debugging
+            mouse_pos(Cord.t_end_call)
+            left_click()
+            time.sleep(1)
+            buy_food(food)
+
+    if food == 'nori':
+        mouse_pos(Cord.phone)
+        time.sleep(.1)
+        left_click()
+        mouse_pos(Cord.menu_toppings)
+        time.sleep(.1)
+        left_click()
+        time.sleep(.1)
+        s = screen_grab()
+        time.sleep(.1)
+        if s.getpixel(Cord.t_nori) not in ((33, 30, 11), (108, 108, 79)): # is available -> (0, 14, 7)
+            print(s.getpixel(Cord.t_nori))  # not necessary but useful for debugging
+            print("nori is available")
+            mouse_pos(Cord.t_nori)
+            time.sleep(.2)
+            left_click()
+            mouse_pos(Cord.delivery_norm)
+            time.sleep(.2)
+            left_click()
+            food_on_hand['nori'] += 10
+            time.sleep(3.5)
+        else:
+            print("nori is NOT available")
+            mouse_pos(Cord.t_end_call)
+            left_click()
+            time.sleep(1)
+            buy_food(food)
+
+    if food == 'roe':
+        mouse_pos(Cord.phone)
+        time.sleep(.2)
+        left_click()
+        mouse_pos(Cord.menu_toppings)
+        time.sleep(.2)
+        left_click()
+        time.sleep(.1)
+        s = screen_grab()
+        print(s.getpixel(Cord.t_roe))
+        time.sleep(.1)
+        if s.getpixel(Cord.t_roe) not in ((127, 103, 0), (218, 255, 236)):
+            print(s.getpixel(Cord.t_nori))   # not necessary but useful for debugging
+            print("roe is available")
+            mouse_pos(Cord.t_roe)
+            time.sleep(.1)
+            left_click()
+            mouse_pos(Cord.delivery_norm)
+            time.sleep(.1)
+            left_click()
+            food_on_hand['roe'] += 10
+            time.sleep(3.5)
+        else:
+            print("roe is NOT available")
+            mouse_pos(Cord.t_end_call)
+            left_click()
+            time.sleep(1)
+            buy_food(food)
+
+
+
+
+#  checks amount of food on hand
+def check_food():
+    for i, j in food_on_hand.items():
+        if i == 'nori' or i == 'roe' or i == 'rice':
+            if j <= 4:
+                print("%s is low and needs to be replenished" % i)
+                buy_food(i)
+        else:
+            if j < 4:
+                print("need to buy %s" % i)
+                print("only have %d on hand'" % j)
+                buy_food(i)
+
+
+# list of sushi type check funtions
+def get_seat_one():
+    box = (30 + x_pad, 76 + y_pad, 110 + x_pad , 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_one__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_seat_two():
+    box = (156 + x_pad, 76 + y_pad, 237 + x_pad, 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_two__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_seat_three():
+    box = (283 + x_pad, 76 + y_pad, 363 + x_pad, 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_three__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_seat_four():
+    box = (410 + x_pad, 76 + y_pad, 489 + x_pad, 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_four__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_seat_five():
+    box = (536 + x_pad, 76 + y_pad, 615 + x_pad, 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_five__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_seat_six():
+    box = (662 + x_pad, 76 + y_pad, 742 + x_pad, 91 + y_pad)
+    im = ImageOps.grayscale(ImageGrab.grab(box))
+    a = array(im.getcolors())
+    a = a.sum()
+    print(a)
+    im.save(os.getcwd() + '\\seat_six__' + str(int(time.time())) + '.png', 'PNG')
+    return a
+
+def get_all_seats():
+    get_seat_one()
+    get_seat_two()
+    get_seat_three()
+    get_seat_four()
+    get_seat_five()
+    get_seat_six()
+
+#  begin checkbubs function
+def check_bubs():
+    check_food()
+    s1 = get_seat_one()
+    if s1 != Blank.seat_1:
+        if s1 in sushi_types:
+            print("table 1 is occupied and needs %s" % sushi_types[s1])
+            make_food(sushi_types[s1])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s1)
+    else:
+        print("Table 1 occupied")
+
+    clear_tables()
+    check_food()
+    s2 = get_seat_two()
+    if s2 != Blank.seat_2:
+        if s2 in sushi_types:
+            print("table 2 is occupied and needs %s" % sushi_types[s2])
+            make_food(sushi_types[s2])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s2)
+    else:
+        print("Table 2 occupied")
+
+    check_food()
+    s3 = get_seat_three()
+    if s3 != Blank.seat_3:
+        if s3 in sushi_types:
+            print("table 3 is occupied and needs %s" % sushi_types[s3])
+            make_food(sushi_types[s3])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s3)
+    else:
+        print("Table 3 occupied")
+
+    check_food()
+    s4 = get_seat_four()
+    if s4 != Blank.seat_4:
+        if s4 in sushi_types:
+            print("table 4 is occupied and needs %s" % sushi_types[s4])
+            make_food(sushi_types[s4])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s4)
+    else:
+        print("Table 4 occupied")
+
+    clear_tables()
+    check_food()
+    s5 = get_seat_five()
+    if s5 != Blank.seat_5:
+        if s5 in sushi_types:
+            print("table 5 is occupied and needs %s" % sushi_types[s5])
+            make_food(sushi_types[s5])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s5)
+    else:
+        print("Table 5 occupied")
+
+    check_food()
+    s6 = get_seat_six()
+    if s6 != Blank.seat_6:
+        if s6 in sushi_types:
+            print("table 6 is occupied and needs %s" % sushi_types[s6])
+            make_food(sushi_types[s6])
+        else:
+            print("Sushi not found!\n sushiType = %i" % s6)
+    else:
+        print("Table 6 occupied")
+
+    clear_tables()
+
+def main():
+    start_game()
+    while True:
+        check_bubs()
+
+
+
+
+"""
+using screen_grab() in python IDLE shell to return pixel value
+
+
+(127, 61, 0)>>> im = screen_grab()
+>>> im.getpixel(Cord.t_fishgg)
+>>> im.getpixel(Cord.t_nori)
+(33, 30, 11)
+>>> im.getpixel(Cord.t_salmon)
+(127, 127, 127)
+>>> im.getpixel(Cord.t_shrimp)
+(127, 102, 90)
+>>> im.getpixel(Cord.t_unagi)
+(94, 49, 8)
+>>> im = screen_grab()
+>>> im.getpixel(Cord.buy_rice)
+(127, 127, 127)
+>>> 
+"""
